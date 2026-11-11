@@ -417,7 +417,10 @@ mod hardware_tests {
         for c in &saved {
             assert_eq!(x.gamma(c.crtc).unwrap(), c.ramp);
         }
-        println!("capture mean before {:.2} during blackout {:.2}", before, during);
+        println!(
+            "capture mean before {:.2} during blackout {:.2}",
+            before, during
+        );
         assert!((before - during).abs() < 2.0);
     }
 }
