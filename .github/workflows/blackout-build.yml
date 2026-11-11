@@ -1,6 +1,6 @@
 # Builds and tests the Blackout fork (Windows x64 + Ubuntu x64) from one commit.
-# Branch pushes upload workflow artifacts; a `v*-blackout` tag also creates a DRAFT
-# GitHub release, which stays unpublished until the maintainer reviews it.
+# Branch pushes upload workflow artifacts; a `v*-blackout` tag also publishes a GitHub
+# pre-release, only after every build and test job above succeeded.
 name: Blackout fork build
 
 on:
@@ -383,8 +383,8 @@ jobs:
           path: build-linux.log
           if-no-files-found: ignore
 
-  draft-release:
-    name: Draft GitHub release
+  release:
+    name: GitHub pre-release
     if: startsWith(github.ref, 'refs/tags/')
     needs: [validate, build-windows, build-linux]
     runs-on: ubuntu-22.04
@@ -415,10 +415,9 @@ jobs:
             echo '```'
           } > release-notes.md
 
-      # A draft is visible only to repository collaborators until it is published by hand.
       - uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
-          draft: true
+          draft: false
           prerelease: true
           name: RustDesk Blackout fork ${{ github.ref_name }}
           body_path: release-notes.md

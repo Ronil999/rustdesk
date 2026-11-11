@@ -251,8 +251,9 @@ Ubuntu x64 (Ubuntu 18.04 container, like the official deb) from the same commit,
 Rust and Dart tests:
 
 - **Push to `feature/blackout-support`**: packages are uploaded as workflow artifacts.
-- **Push a tag such as `v1.0.0-blackout`**: as above, plus a **draft** GitHub release with both
-  packages, `SHA256SUMS.txt` and the release notes. Review the draft, then press *Publish*.
+- **Push a tag such as `v1.0.0-blackout`**: as above, plus a public GitHub **pre-release** with
+  both packages, `SHA256SUMS.txt` and the release notes. It is created only if every build and
+  test job succeeded.
 
 ```bash
 git tag v1.0.0-blackout && git push origin v1.0.0-blackout
