@@ -120,7 +120,15 @@ impl Drop for SimpleCallOnReturn {
     }
 }
 
+/// The Blackout fork installs beside official RustDesk: this name gives it its own config, ID,
+/// service, IPC paths and install directory.
+pub const FORK_APP_NAME: &str = "RustDeskBlackout";
+
 pub fn global_init() -> bool {
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        *hbb_common::config::APP_NAME.write().unwrap() = FORK_APP_NAME.to_owned();
+    }
     #[cfg(target_os = "linux")]
     base::blackout::dispatch_guard();
     #[cfg(all(target_os = "linux", feature = "drm"))]

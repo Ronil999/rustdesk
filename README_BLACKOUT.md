@@ -17,6 +17,24 @@ machine's running applications are not affected.
 - **When you disconnect** (or the network drops, or RustDesk quits or crashes), the remote
   monitors are restored automatically.
 
+### Runs beside official RustDesk
+
+The app is named **RustDesk Blackout** (`RustDeskBlackout`) and keeps everything separate from an
+official RustDesk on the same computer, so both can be installed and running at once:
+
+| | Official RustDesk | This fork |
+|---|---|---|
+| Linux package / command | `rustdesk` | `rustdesk-blackout` / `rustdeskblackout` |
+| Linux install dir / service | `/usr/share/rustdesk`, `rustdesk.service` | `/usr/share/rustdeskblackout`, `rustdeskblackout.service` |
+| Windows exe / install dir / service | `rustdesk.exe`, `C:\Program Files\RustDesk`, `RustDesk` | `RustDeskBlackout.exe`, `C:\Program Files\RustDeskBlackout`, `RustDeskBlackout` |
+| Settings, ID and password | `~/.config/rustdesk`, `%APPDATA%\RustDesk` | `~/.config/rustdeskblackout`, `%APPDATA%\RustDeskBlackout` |
+| Logs | `~/.local/share/logs/RustDesk` | `~/.local/share/logs/RustDeskBlackout` |
+
+Because its settings are separate, the fork gets **its own RustDesk ID and password**. Use the
+fork's ID (shown in its main window) when connecting to a machine for Blackout. The name is the
+`FORK_APP_NAME` constant in `src/common.rs`; the Linux package names come from
+`res/blackout/rebrand-deb.sh`.
+
 Blackout never turns on by itself. It only turns on when an authorized controller clicks it.
 It is separate from RustDesk's *Privacy mode* and does not use it.
 
@@ -67,27 +85,26 @@ sha256sum -c SHA256SUMS.txt --ignore-missing
 ### Ubuntu
 
 ```bash
-sudo apt install ./rustdesk-1.5.3-blackout-ubuntu-x86_64.deb
+sudo apt install ./rustdesk-blackout-1.5.3-ubuntu-x86_64.deb
+rustdeskblackout          # or open "RustDesk Blackout" from the app menu
 ```
 
-The package is named `rustdesk`, so it **replaces an installed official RustDesk**. Your
-RustDesk ID, password and settings are kept. To go back, install the official `.deb` the same
-way.
-
-After installing, log out and back in (or reboot) once so the RustDesk service starts in your
-Xorg session.
+It installs **beside** an official RustDesk and does not touch it. After installing, log out and
+back in (or reboot) once so its service (`rustdeskblackout.service`) starts in your Xorg session.
+Remove it with `sudo apt remove rustdesk-blackout`.
 
 ### Windows
 
-- `rustdesk-1.5.3-blackout-windows-x86_64.exe`: run it. It works without installing, and the
-  app offers *Install* from its main window.
-- `rustdesk-1.5.3-blackout-windows-x86_64.zip`: the same files as a plain folder.
+- `RustDeskBlackout-1.5.3-windows-x86_64.exe`: run it. It works without installing (it unpacks
+  to its own `rustdeskblackout` folder), and the app offers *Install* from its main window, which
+  installs to `C:\Program Files\RustDeskBlackout` beside an official RustDesk.
+- `RustDeskBlackout-1.5.3-windows-x86_64.zip`: the same files as a plain folder.
 
 The Windows build is **not code-signed**, so Windows SmartScreen will warn. Click
 *More info → Run anyway*.
 
-> **Do not accept RustDesk's in-app "update available" prompt.** It installs the official
-> build, which has no Blackout.
+The fork does not check for official RustDesk updates, so it is never replaced by the official
+build.
 
 ## How it works
 
@@ -159,7 +176,7 @@ line.
 ### Recovery
 
 1. **Before** blanking, the original ramps are written to
-   `~/.config/rustdesk/blackout_state.json` (mode 0600).
+   `~/.config/rustdeskblackout/blackout_state.json` (mode 0600).
 2. A small **guard** process (`rustdesk --blackout-guard`) waits on a pipe from the server. It
    is event-driven and does not poll. The pipe closes however the server ends, including a
    crash or `SIGKILL`, and the guard then restores the ramps. It ignores SIGTERM/SIGHUP, so a
@@ -191,6 +208,8 @@ ramp changed since, or reset by a reboot or X restart, is left alone.
 - **Power loss, a GPU reset, or the monitor's own settings**: if the X server or the display
   hardware goes away, there is nothing to restore. The ramps reset when X restarts.
 - **Web client** (`flutter/lib/web`): no Blackout.
+- **Side by side on Windows:** the optional virtual-display driver is shared with an official
+  RustDesk on the same PC. Everything else (service, settings, ID, install folder) is separate.
 
 ## Troubleshooting
 
@@ -198,7 +217,7 @@ ramp changed since, or reset by a reboot or X restart, is left alone.
 |---|---|
 | "does not support Blackout" | Both sides need this fork. On Ubuntu, log in with "Ubuntu on Xorg". |
 | "refused Blackout" | The host must allow keyboard/mouse control for your session. Turn view-only off. |
-| Monitor stays black after the session | Log out and back in, or run `xrandr --output <name> --brightness 1` in the session. Please report it, with `~/.local/share/logs/RustDesk/server/*.log` (lines containing `blackout:`). |
+| Monitor stays black after the session | Log out and back in, or run `xrandr --output <name> --brightness 1` in the session. Please report it, with `~/.local/share/logs/RustDeskBlackout/server/*.log` (lines containing `blackout:`). |
 | Pointer still visible | Hardware-cursor limitation of the driver (see above). |
 | Comes back after a while | Night Light or a colour daemon reset the gamma. Disable it. |
 

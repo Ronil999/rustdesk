@@ -39,7 +39,7 @@ jobs:
       - name: Install prerequisites
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y libxcb-randr0-dev libxcb1-dev pkg-config
+          sudo apt-get install -y libxcb-randr0-dev libxcb1-dev libwayland-dev libssl-dev pkg-config
 
       - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
         with:
@@ -197,6 +197,9 @@ jobs:
         run: |
           mv ./flutter/build/windows/x64/runner/Release ./rustdesk
           if (-not (Test-Path ./rustdesk/rustdesk.exe)) { throw "rustdesk.exe was not produced" }
+          # The exe carries the app name, so installs, services and the portable unpack
+          # directory stay apart from official RustDesk.
+          mv ./rustdesk/rustdesk.exe ./rustdesk/RustDeskBlackout.exe
 
           # Virtual display driver, as in the official package.
           Invoke-WebRequest -Uri https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
@@ -225,11 +228,11 @@ jobs:
           sed -i '/dpiAware/d' res/manifest.xml
           pushd ./libs/portable
           pip3 install -r requirements.txt
-          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/rustdesk.exe
+          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/RustDeskBlackout.exe
           popd
           mkdir -p ./dist
-          mv ./target/release/rustdesk-portable-packer.exe ./dist/rustdesk-${{ env.VERSION }}-blackout-windows-x86_64.exe
-          7z a ./dist/rustdesk-${{ env.VERSION }}-blackout-windows-x86_64.zip ./rustdesk/*
+          mv ./target/release/rustdesk-portable-packer.exe ./dist/RustDeskBlackout-${{ env.VERSION }}-windows-x86_64.exe
+          7z a ./dist/RustDeskBlackout-${{ env.VERSION }}-windows-x86_64.zip ./rustdesk/*
 
       - name: Upload Windows package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -357,13 +360,13 @@ jobs:
             export CARGO_INCREMENTAL=0
             export DEB_ARCH=amd64
             python3 ./build.py --flutter --skip-cargo 2>&1 | tee -a build-linux.log
-            mkdir -p dist
-            mv rustdesk-${{ env.VERSION }}.deb dist/rustdesk-${{ env.VERSION }}-blackout-ubuntu-x86_64.deb
 
-      - name: Inspect deb package
+      - name: Rebrand deb to install beside official RustDesk
         run: |
+          mkdir -p dist
+          bash res/blackout/rebrand-deb.sh rustdesk-${{ env.VERSION }}.deb dist/rustdesk-blackout-${{ env.VERSION }}-ubuntu-x86_64.deb
           dpkg-deb --info dist/*.deb
-          dpkg-deb --contents dist/*.deb | grep -E "usr/share/rustdesk/(rustdesk|lib/librustdesk.so)$"
+          dpkg-deb --contents dist/*.deb | grep -E "usr/share/rustdeskblackout/(rustdeskblackout|lib/librustdesk.so)$"
 
       - name: Upload Ubuntu package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

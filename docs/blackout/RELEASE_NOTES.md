@@ -14,10 +14,16 @@ off, disconnecting, or the session ending for any reason (including a crash) res
 
 | File | For |
 |---|---|
-| `rustdesk-1.5.3-blackout-windows-x86_64.exe` | Windows 10/11 x64, run or install |
-| `rustdesk-1.5.3-blackout-windows-x86_64.zip` | Windows 10/11 x64, plain folder |
-| `rustdesk-1.5.3-blackout-ubuntu-x86_64.deb` | Ubuntu 18.04+ x64: `sudo apt install ./<file>` (replaces an installed official RustDesk) |
+| `RustDeskBlackout-1.5.3-windows-x86_64.exe` | Windows 10/11 x64, run or install |
+| `RustDeskBlackout-1.5.3-windows-x86_64.zip` | Windows 10/11 x64, plain folder |
+| `rustdesk-blackout-1.5.3-ubuntu-x86_64.deb` | Ubuntu 18.04+ x64: `sudo apt install ./<file>`, then run `rustdeskblackout` |
 | `SHA256SUMS.txt` | `sha256sum -c SHA256SUMS.txt --ignore-missing` |
+
+### Installs beside official RustDesk
+
+The app is called **RustDesk Blackout** and has its own install folder, service, settings, ID and
+password, so an official RustDesk on the same computer keeps working untouched. Connect using the
+**fork's ID** (shown in its main window).
 
 ### Supported
 
@@ -32,6 +38,5 @@ off, disconnecting, or the session ending for any reason (including a crash) res
 - On some GPU drivers the mouse pointer stays visible, and LCD backlights stay lit.
 - The person at the controlled machine cannot see the screen while Blackout is on.
 - The Windows build is not code-signed (SmartScreen warning).
-- Do not accept the in-app update prompt. It installs the official build, which has no Blackout.
 
 Full details: `README_BLACKOUT.md`.
