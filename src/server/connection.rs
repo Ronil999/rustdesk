@@ -385,6 +385,7 @@ pub struct Connection {
     recording: bool,
     block_input: bool,
     privacy_mode: bool,
+    blackout: Option<base::blackout::Lease>,
     control_permissions: Option<ControlPermissions>,
     last_test_delay: Option<Instant>,
     network_delay: u32,
@@ -600,6 +601,7 @@ impl Connection {
             recording: Self::permission(keys::OPTION_ENABLE_RECORD_SESSION, &control_permissions),
             block_input: Self::permission(keys::OPTION_ENABLE_BLOCK_INPUT, &control_permissions),
             privacy_mode: Self::permission(keys::OPTION_ENABLE_PRIVACY_MODE, &control_permissions),
+            blackout: None,
             control_permissions,
             last_test_delay: None,
             network_delay: 0,
@@ -2099,6 +2101,7 @@ impl Connection {
             privacy_mode: privacy_mode::is_privacy_mode_supported(),
             #[cfg(not(any(target_os = "android", target_os = "ios")))]
             terminal,
+            blackout: base::blackout::is_supported(),
             ..Default::default()
         })
         .into();
@@ -3918,6 +3921,9 @@ impl Connection {
                             self.toggle_privacy_mode(t).await;
                         }
                     }
+                    Some(misc::Union::ToggleBlackout(t)) => {
+                        self.toggle_blackout(t.on).await;
+                    }
                     Some(misc::Union::ChatMessage(c)) => {
                         self.send_to_cm(ipc::Data::ChatMessage { text: c.text });
                         self.chat_unanswered = true;
@@ -4818,6 +4824,12 @@ impl Connection {
         }
     }
 
+    async fn toggle_blackout(&mut self, on: bool) {
+        let allowed = self.is_authed_remote_conn() && self.keyboard;
+        let msg = base::blackout::toggle(self.inner.id(), allowed, on, &mut self.blackout).await;
+        self.send(msg).await;
+    }
+
     async fn toggle_privacy_mode(&mut self, t: TogglePrivacyMode) {
         if t.on {
             self.turn_on_privacy(t.impl_key).await;
@@ -5306,6 +5318,7 @@ impl Connection {
             return;
         }
         self.closed = true;
+        base::blackout::end_session(self.blackout.take()).await;
         // If voice A,B -> C, and A,B has voice call
         // B disconnects, C will reset the voice call input.
         //

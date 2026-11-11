@@ -2474,6 +2474,9 @@ impl<T: InvokeUiSession> Remote<T> {
                     Some(misc::Union::FollowCurrentDisplay(d_idx)) => {
                         self.handler.set_current_display(d_idx);
                     }
+                    Some(misc::Union::BlackoutResponse(r)) => {
+                        self.handler.update_blackout(&r);
+                    }
                     _ => {}
                 },
                 Some(message::Union::TestDelay(t)) => {

@@ -386,6 +386,12 @@ pub fn session_toggle_option(session_id: SessionID, value: String) {
     }
 }
 
+pub fn session_toggle_blackout(session_id: SessionID, on: bool) {
+    if let Some(session) = sessions::get_session_by_session_id(&session_id) {
+        session.toggle_blackout(on);
+    }
+}
+
 pub fn session_toggle_privacy_mode(session_id: SessionID, impl_key: String, on: bool) {
     if let Some(session) = sessions::get_session_by_session_id(&session_id) {
         session.toggle_privacy_mode(impl_key, on);

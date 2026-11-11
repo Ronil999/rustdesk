@@ -385,6 +385,8 @@ pub fn core_main() -> Option<CoreMainAction> {
         } else if args[0] == "--server" {
             log::info!("start --server with user {}", crate::username());
             #[cfg(target_os = "linux")]
+            base::blackout::recover_on_startup();
+            #[cfg(target_os = "linux")]
             {
                 hbb_common::allow_err!(crate::platform::check_autostart_config());
                 std::process::Command::new("pkill")

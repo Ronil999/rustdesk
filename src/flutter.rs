@@ -707,6 +707,24 @@ impl InvokeUiSession for FlutterHandler {
         self.push_event::<&str>("update_privacy_mode", &[], &[]);
     }
 
+    fn update_blackout(&self, res: &BlackoutResponse) {
+        let status = match res.status.enum_value() {
+            Ok(blackout_response::Status::Ok) => "ok",
+            Ok(blackout_response::Status::NotSupported) => "not_supported",
+            Ok(blackout_response::Status::Denied) => "denied",
+            _ => "failed",
+        };
+        self.push_event(
+            "update_blackout",
+            &[
+                ("status", status),
+                ("on", if res.on { "true" } else { "false" }),
+                ("details", res.details.as_str()),
+            ],
+            &[],
+        );
+    }
+
     fn set_permission(&self, name: &str, value: bool) {
         self.push_event("permission", &[(name, &value.to_string())], &[]);
     }
@@ -902,6 +920,7 @@ impl InvokeUiSession for FlutterHandler {
         let mut features: HashMap<&str, bool> = Default::default();
         for ref f in pi.features.iter() {
             features.insert("privacy_mode", f.privacy_mode);
+            features.insert("blackout", f.blackout);
         }
         // compatible with 1.1.9
         if get_version_number(&pi.version) < get_version_number("1.2.0") {
