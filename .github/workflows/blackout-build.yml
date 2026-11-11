@@ -1,0 +1,422 @@
+# Builds and tests the Blackout fork (Windows x64 + Ubuntu x64) from one commit.
+# Branch pushes upload workflow artifacts; a `v*-blackout` tag also creates a DRAFT
+# GitHub release, which stays unpublished until the maintainer reviews it.
+name: Blackout fork build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/blackout-support
+    tags:
+      - "v*-blackout"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: blackout-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  RUST_VERSION: "1.75"
+  LLVM_VERSION: "15.0.6"
+  FLUTTER_VERSION: "3.24.5"
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+  VCPKG_COMMIT_ID: "9e593bb18ea69cc5095e012465dcd675a822ed0d"
+  VERSION: "1.5.3"
+
+jobs:
+  validate:
+    name: Blackout tests (Rust core + Dart)
+    needs: [generate-bridge]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          submodules: recursive
+
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libxcb-randr0-dev libxcb1-dev pkg-config
+
+      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          components: "rustfmt"
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          prefix-key: blackout-validate
+
+      - name: rustfmt (blackout modules)
+        run: rustfmt --edition 2018 --check libs/base/src/blackout/mod.rs
+
+      - name: Rust tests (base crate, mocked display backend)
+        run: |
+          set -o pipefail
+          cargo test --locked -p base 2>&1 | tee rust-tests.log
+
+      - name: Restore bridge files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: bridge-artifact
+          path: ./
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: "stable"
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Dart format (blackout files)
+        working-directory: flutter
+        run: |
+          dart format --output=none --set-exit-if-changed \
+            lib/models/blackout_model.dart \
+            lib/common/widgets/blackout_menu.dart \
+            test/blackout_test.dart
+
+      - name: Flutter analyze (files touched by blackout)
+        working-directory: flutter
+        run: |
+          set -o pipefail
+          flutter pub get
+          flutter analyze --no-fatal-infos --no-fatal-warnings \
+            lib/models/blackout_model.dart \
+            lib/common/widgets/blackout_menu.dart \
+            lib/common/widgets/toolbar.dart \
+            lib/common/shared_state.dart \
+            lib/models/model.dart \
+            test/blackout_test.dart 2>&1 | tee ../flutter-analyze.log
+
+      - name: Flutter tests
+        working-directory: flutter
+        run: |
+          set -o pipefail
+          flutter test 2>&1 | tee ../flutter-tests.log
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: blackout-test-logs
+          path: |
+            rust-tests.log
+            flutter-analyze.log
+            flutter-tests.log
+
+  generate-bridge:
+    uses: ./.github/workflows/bridge.yml
+
+  build-windows:
+    name: Windows x64
+    needs: [generate-bridge]
+    runs-on: windows-2022
+    steps:
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          submodules: recursive
+
+      - name: Restore bridge files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: bridge-artifact
+          path: ./
+
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@ebc0426251bc40c7cd31162802432c68818ab8f0 # v2.0.9
+        with:
+          version: ${{ env.LLVM_VERSION }}
+
+      - name: Install flutter
+        uses: subosito/flutter-action@2783a3f08e1baf891508463f8c6653c258246225 # v2.12.0
+        with:
+          channel: "stable"
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          architecture: x64
+
+      # Same custom engine and patch as the official Windows x64 build.
+      - name: Replace engine with rustdesk custom flutter engine
+        run: |
+          flutter doctor -v
+          flutter precache --windows
+          Invoke-WebRequest -Uri https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip -OutFile windows-x64-release.zip
+          Expand-Archive -Path windows-x64-release.zip -DestinationPath windows-x64-release
+          mv -Force windows-x64-release/*  C:/hostedtoolcache/windows/flutter/stable-${{ env.FLUTTER_VERSION }}-x64/bin/cache/artifacts/engine/windows-x64-release/
+
+      - name: Patch flutter
+        shell: bash
+        run: |
+          cp .github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff $(dirname $(dirname $(which flutter)))
+          cd $(dirname $(dirname $(which flutter)))
+          git apply flutter_3.24.4_dropdown_menu_enableFilter.diff
+
+      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: x86_64-pc-windows-msvc
+          components: "rustfmt"
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          prefix-key: blackout-windows-2022
+
+      - name: Setup vcpkg with Github Actions binary cache
+        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11
+        with:
+          vcpkgDirectory: C:\vcpkg
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
+          doNotCache: false
+
+      - name: Install vcpkg dependencies
+        env:
+          VCPKG_DEFAULT_HOST_TRIPLET: x64-windows-static
+        shell: bash
+        run: |
+          if ! $VCPKG_ROOT/vcpkg install --triplet x64-windows-static --x-install-root="$VCPKG_ROOT/installed"; then
+            find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
+              echo "$_1:"; cat "$_1"; echo ""
+            done
+            exit 1
+          fi
+
+      - name: Build rustdesk
+        shell: bash
+        run: python3 ./build.py --portable --flutter --skip-portable-pack --hwcodec --vram 2>&1 | tee build-windows.log
+
+      - name: Collect Windows bundle
+        run: |
+          mv ./flutter/build/windows/x64/runner/Release ./rustdesk
+          if (-not (Test-Path ./rustdesk/rustdesk.exe)) { throw "rustdesk.exe was not produced" }
+
+          # Virtual display driver, as in the official package.
+          Invoke-WebRequest -Uri https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
+          Expand-Archive usbmmidd_v2.zip -DestinationPath .
+          Remove-Item -Path usbmmidd_v2\Win32 -Recurse
+          Remove-Item -Path "usbmmidd_v2\deviceinstaller64.exe", "usbmmidd_v2\deviceinstaller.exe", "usbmmidd_v2\usbmmidd.bat"
+          mv -Force .\usbmmidd_v2 ./rustdesk
+
+      - name: Run the Rust tests
+        shell: bash
+        run: |
+          FEATURES=$(python3 ./build.py --portable --flutter --skip-portable-pack --hwcodec --vram --print-features)
+          cargo test --locked -p base 2>&1 | tee rust-tests-windows.log
+          cargo test --locked --release --lib --features "$FEATURES" 2>&1 | tee -a rust-tests-windows.log
+
+      - name: find Runner.res
+        continue-on-error: true
+        shell: bash
+        run: |
+          runner_res=$(find . -name "Runner.res");
+          if [ "$runner_res" != "" ]; then cp $runner_res ./libs/portable/Runner.res; fi
+
+      - name: Build self-extracted executable
+        shell: bash
+        run: |
+          sed -i '/dpiAware/d' res/manifest.xml
+          pushd ./libs/portable
+          pip3 install -r requirements.txt
+          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/rustdesk.exe
+          popd
+          mkdir -p ./dist
+          mv ./target/release/rustdesk-portable-packer.exe ./dist/rustdesk-${{ env.VERSION }}-blackout-windows-x86_64.exe
+          7z a ./dist/rustdesk-${{ env.VERSION }}-blackout-windows-x86_64.zip ./rustdesk/*
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rustdesk-blackout-windows-x86_64
+          path: ./dist/*
+          if-no-files-found: error
+
+      - name: Upload Windows logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: blackout-windows-logs
+          path: |
+            build-windows.log
+            rust-tests-windows.log
+          if-no-files-found: ignore
+
+  build-linux:
+    name: Ubuntu x64
+    needs: [generate-bridge]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Maximize build space
+        run: |
+          sudo rm -rf /opt/ghc /usr/local/lib/android /usr/share/dotnet
+          sudo apt-get update -y
+          sudo apt-get install -y nasm qemu-user-static
+
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          submodules: recursive
+
+      - name: Set Swap Space
+        uses: pierotofy/set-swap-space@49819abfb41bd9b44fb781159c033dba90353a7c # v1.0
+        with:
+          swap-size-gb: 12
+
+      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: x86_64-unknown-linux-gnu
+          components: "rustfmt"
+
+      - name: Save Rust toolchain version
+        run: echo "RUST_TOOLCHAIN_VERSION=$(cargo --version | awk '{print $2}')" >> $GITHUB_ENV
+
+      - name: Disable rust bridge build
+        run: sed -i "s/\[\"cdylib\", \"staticlib\", \"rlib\"\]/\[\"cdylib\"\]/g" Cargo.toml
+
+      - name: Setup vcpkg with Github Actions binary cache
+        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11
+        with:
+          vcpkgDirectory: /opt/artifacts/vcpkg
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
+          doNotCache: false
+
+      - name: Install vcpkg dependencies
+        shell: bash
+        run: |
+          sudo apt install -y libva-dev
+          if ! $VCPKG_ROOT/vcpkg install --triplet x64-linux --x-install-root="$VCPKG_ROOT/installed"; then
+            find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
+              echo "$_1:"; cat "$_1"; echo ""
+            done
+            exit 1
+          fi
+
+      - name: Restore bridge files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: bridge-artifact
+          path: ./
+
+      # Same Ubuntu 18.04 container as the official deb, so it installs on older releases too.
+      - uses: rustdesk-org/run-on-arch-action@d3fcfbb632b84cf7f6bc772bfaaa2c2f4f8789a8
+        name: Build rustdesk
+        with:
+          arch: x86_64
+          distro: ubuntu18.04
+          githubToken: ${{ github.token }}
+          dockerRunArgs: |
+            --volume "${PWD}:/workspace"
+            --volume "/opt/artifacts:/opt/artifacts"
+          shell: /bin/bash
+          install: |
+            apt-get update -y
+            apt-get install -y \
+               build-essential clang cmake curl gcc git g++ \
+               libayatana-appindicator3-dev libasound2-dev libclang-10-dev \
+               libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgtk-3-dev \
+               libpulse-dev libva-dev libxcb-randr0-dev libxcb-shape0-dev \
+               libxcb-xfixes0-dev libxdo-dev libxfixes-dev llvm-10-dev nasm \
+               ninja-build pkg-config python3 unzip wget xz-utils libssl-dev
+            apt-get remove -y libopus-dev || true
+          run: |
+            set -o pipefail
+            git config --global --add safe.directory "*"
+            pushd /opt
+            wget -O rust.tar.gz https://static.rust-lang.org/dist/rust-${{ env.RUST_TOOLCHAIN_VERSION }}-x86_64-unknown-linux-gnu.tar.gz
+            tar -zxf rust.tar.gz && rm rust.tar.gz
+            cd rust-${{ env.RUST_TOOLCHAIN_VERSION }}-x86_64-unknown-linux-gnu && ./install.sh > /dev/null
+            popd
+            pushd /workspace
+            export VCPKG_ROOT=/opt/artifacts/vcpkg
+            cargo build --locked --lib --features hwcodec,flutter,unix-file-copy-paste --release 2>&1 | tee build-linux.log
+            rm -rf target/release/deps target/release/build
+
+            pushd /opt
+            wget -q https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${{ env.FLUTTER_VERSION }}-stable.tar.xz
+            tar xf flutter_linux_${{ env.FLUTTER_VERSION }}-stable.tar.xz
+            export PATH=/opt/flutter/bin:$PATH
+            pushd /opt/flutter
+            git apply /workspace/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff
+            popd
+            popd
+
+            export CARGO_INCREMENTAL=0
+            export DEB_ARCH=amd64
+            python3 ./build.py --flutter --skip-cargo 2>&1 | tee -a build-linux.log
+            mkdir -p dist
+            mv rustdesk-${{ env.VERSION }}.deb dist/rustdesk-${{ env.VERSION }}-blackout-ubuntu-x86_64.deb
+
+      - name: Inspect deb package
+        run: |
+          dpkg-deb --info dist/*.deb
+          dpkg-deb --contents dist/*.deb | grep -E "usr/share/rustdesk/(rustdesk|lib/librustdesk.so)$"
+
+      - name: Upload Ubuntu package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rustdesk-blackout-ubuntu-x86_64
+          path: dist/*.deb
+          if-no-files-found: error
+
+      - name: Upload Linux logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: blackout-linux-logs
+          path: build-linux.log
+          if-no-files-found: ignore
+
+  draft-release:
+    name: Draft GitHub release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [validate, build-windows, build-linux]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: rustdesk-blackout-*
+          path: release
+          merge-multiple: true
+
+      - name: Checksums and notes
+        run: |
+          cd release
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          cd ..
+          {
+            cat docs/blackout/RELEASE_NOTES.md
+            echo
+            echo "Built from commit \`${GITHUB_SHA}\` (both platforms)."
+            echo
+            echo '```'
+            cat release/SHA256SUMS.txt
+            echo '```'
+          } > release-notes.md
+
+      # A draft is visible only to repository collaborators until it is published by hand.
+      - uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
+        with:
+          draft: true
+          prerelease: true
+          name: RustDesk Blackout fork ${{ github.ref_name }}
+          body_path: release-notes.md
+          files: release/*
