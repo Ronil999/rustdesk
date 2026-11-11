@@ -826,5 +826,9 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("install-directory-not-empty-tip", "La cartella selezionata non è vuota. L'installazione potrebbe eliminare i dati esistenti. Valuta la possibilità di scegliere una cartella diversa."),
         ("Request approval", "Richiedi approvazione"),
         ("Forever", "Per sempre"),
+        ("Blackout", ""),
+        ("blackout_not_supported_tip", ""),
+        ("blackout_denied_tip", ""),
+        ("blackout_failed_tip", ""),
     ].iter().cloned().collect();
 }

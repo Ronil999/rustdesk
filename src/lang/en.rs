@@ -292,5 +292,8 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("api_server_empty_tip", "With API Server empty, your custom server defaults to HTTP. Contact your administrator to enable HTTPS."),
         ("android-logs-folder-tip", "Choose Android → media to store log files."),
         ("install-directory-not-empty-tip", "The selected folder is not empty. Installation may delete existing data. Consider choosing a different folder."),
+        ("blackout_not_supported_tip", "The remote device does not support Blackout. It needs this RustDesk build and an Xorg (X11) session on Linux."),
+        ("blackout_denied_tip", "The remote device refused Blackout. Remote control permission is required."),
+        ("blackout_failed_tip", "Blackout could not change the remote monitors."),
     ].iter().cloned().collect();
 }

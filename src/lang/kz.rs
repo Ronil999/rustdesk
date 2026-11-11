@@ -826,5 +826,9 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("install-directory-not-empty-tip", "Таңдалған бума бос емес. Орнату бар деректерді жоюы мүмкін. Басқа буманы таңдаған жөн."),
         ("Request approval", "Мақұлдауды сұрау"),
         ("Forever", "Мәңгі"),
+        ("Blackout", ""),
+        ("blackout_not_supported_tip", ""),
+        ("blackout_denied_tip", ""),
+        ("blackout_failed_tip", ""),
     ].iter().cloned().collect();
 }

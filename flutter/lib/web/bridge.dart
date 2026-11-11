@@ -1408,6 +1408,13 @@ class RustdeskImpl {
     return Future.value();
   }
 
+  // The Web client does not read the blackout feature, so its toolbar reports
+  // blackout as unsupported and never sends this.
+  Future<void> sessionToggleBlackout(
+      {required UuidValue sessionId, required bool on, dynamic hint}) {
+    return Future.value();
+  }
+
   Future<void> sessionToggleVirtualDisplay(
       {required UuidValue sessionId,
       required int index,

@@ -26,6 +26,8 @@ import 'package:flutter_hbb/models/user_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/models/desktop_render_texture.dart';
 import 'package:flutter_hbb/models/terminal_model.dart';
+import 'package:flutter_hbb/models/blackout_model.dart';
+import 'package:flutter_hbb/common/widgets/blackout_menu.dart';
 import 'package:flutter_hbb/common/shared_state.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
 import 'package:flutter_hbb/utils/http_service.dart' as http;
@@ -399,6 +401,8 @@ class FfiModel with ChangeNotifier {
         updateBlockInputState(evt, peerId);
       } else if (name == 'update_privacy_mode') {
         updatePrivacyMode(evt, sessionId, peerId);
+      } else if (name == 'update_blackout') {
+        handleBlackoutEvent(evt, peerId);
       } else if (name == 'show_elevation') {
         final show = evt['show'].toString() == 'true';
         parent.target?.serverModel.setShowElevation(show);
@@ -912,6 +916,10 @@ class FfiModel with ChangeNotifier {
         type == 'restarting' ||
         (type is String && type.contains('error'))) {
       parent.target?.inputModel.setRelativeMouseMode(false);
+    }
+    // The host releases a session's blackout when the connection drops.
+    if (title == 'Connection Error' || type == 'restarting') {
+      BlackoutState.reset(peerId);
     }
 
     if (type == 're-input-password') {
@@ -1460,6 +1468,8 @@ class FfiModel with ChangeNotifier {
       }
       Map<String, dynamic> features = json.decode(evt['features']);
       _pi.features.privacyMode = features['privacy_mode'] == true;
+      _pi.features.blackout = features['blackout'] == true;
+      BlackoutState.reset(peerId);
       if (!isCache) {
         handleResolutions(peerId, evt["resolutions"]);
       }
@@ -4508,6 +4518,7 @@ class Resolution {
 
 class Features {
   bool privacyMode = false;
+  bool blackout = false;
 }
 
 const kInvalidDisplayIndex = -1;

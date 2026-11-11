@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/shared_state.dart';
+import 'package:flutter_hbb/common/widgets/blackout_menu.dart';
+import 'package:flutter_hbb/models/blackout_model.dart';
 import 'package:flutter_hbb/common/widgets/dialog.dart';
 import 'package:flutter_hbb/common/widgets/login.dart';
 import 'package:flutter_hbb/consts.dart';
@@ -672,6 +674,12 @@ List<TTextMenu> toolbarControls(BuildContext context, String id, FFI ffi) {
           onPressed: () => bind.sessionLockScreen(sessionId: sessionId),
           actionId: kShortcutActionInsertLock),
     );
+  }
+  // blackout
+  if (isDefaultConn &&
+      ((!ffiModel.viewOnly && ffiModel.keyboard) ||
+          BlackoutState.find(id).value != BlackoutStatus.off)) {
+    v.add(blackoutMenu(id, ffi));
   }
   // blockUserInput
   if (isDefaultConn &&

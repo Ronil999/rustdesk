@@ -1,4 +1,5 @@
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/models/blackout_model.dart';
 import 'package:get/get.dart';
 
 import '../consts.dart';
@@ -355,6 +356,7 @@ initSharedStates(String id) {
 
 removeSharedStates(String id) {
   PrivacyModeState.delete(id);
+  BlackoutState.delete(id);
   BlockInputState.delete(id);
   CurrentDisplayState.delete(id);
   ShowRemoteCursorState.delete(id);
