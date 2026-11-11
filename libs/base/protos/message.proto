@@ -104,6 +104,8 @@ message Features {
   bool privacy_mode = 1;
   bool terminal = 2;
   bool port_forward_mux = 3;
+  // Blackout fork: field numbers from 1001 keep clear of upstream's future fields.
+  bool blackout = 1001;
 }
 
 message CodecAbility {
@@ -872,7 +874,25 @@ message Misc {
     // is rebuilt, and held again, the next time it is shown, before any connection names it
     // by id again, so the shape just selected is always there to give.
     uint64 request_cursor_data = 39;
+    ToggleBlackout toggle_blackout = 1001;
+    BlackoutResponse blackout_response = 1002;
   }
+}
+
+// Blank the controlled side's physical monitors while the session keeps capturing them.
+message ToggleBlackout { bool on = 1; }
+
+message BlackoutResponse {
+  enum Status {
+    Ok = 0;
+    NotSupported = 1;
+    Denied = 2;
+    Failed = 3;
+  }
+  Status status = 1;
+  // Whether this session holds the blackout after the request was handled.
+  bool on = 2;
+  string details = 3;
 }
 
 message VoiceCallRequest {
