@@ -842,6 +842,7 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
       state: widget.state,
       setFullscreen: _setFullscreen,
     ));
+    toolbarItems.add(_FullscreenMenu(setFullscreen: _setFullscreen));
     // Do not show keyboard for camera connection type.
     if (widget.ffi.connType == ConnType.defaultConn) {
       toolbarItems.add(_KeyboardMenu(id: widget.id, ffi: widget.ffi));
@@ -3019,6 +3020,26 @@ class _CloseMenu extends StatelessWidget {
       color: _ToolbarTheme.redColor,
       hoverColor: _ToolbarTheme.hoverRedColor,
     );
+  }
+}
+
+class _FullscreenMenu extends StatelessWidget {
+  final Function(bool) setFullscreen;
+  const _FullscreenMenu({Key? key, required this.setFullscreen})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final isFullscreen = stateGlobal.fullscreen;
+    return Obx(() => _IconMenuButton(
+          assetName: isFullscreen.isTrue
+              ? 'assets/fullscreen_exit.svg'
+              : 'assets/fullscreen.svg',
+          tooltip: isFullscreen.isTrue ? 'Exit Fullscreen' : 'Fullscreen',
+          onPressed: () => setFullscreen(!isFullscreen.value),
+          color: _ToolbarTheme.blueColor,
+          hoverColor: _ToolbarTheme.hoverBlueColor,
+        ));
   }
 }
 
