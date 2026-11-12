@@ -1,4 +1,4 @@
-# OpenDesk
+# VeilDesk
 
 > **This is an independently maintained fork of [RustDesk](https://github.com/rustdesk/rustdesk),
 > not an official RustDesk release.** It adds *Blackout* and a toolbar *Fullscreen* button, with
@@ -20,16 +20,16 @@ machine's running applications are not affected.
 
 ### Runs beside official RustDesk
 
-The app is named **OpenDesk** (`OpenDesk`) and keeps everything separate from an
+The app is named **VeilDesk** (`VeilDesk`) and keeps everything separate from an
 official RustDesk on the same computer, so both can be installed and running at once:
 
 | | Official RustDesk | This fork |
 |---|---|---|
-| Linux package / command | `rustdesk` | `opendesk` / `opendesk` |
-| Linux install dir / service | `/usr/share/rustdesk`, `rustdesk.service` | `/usr/share/opendesk`, `opendesk.service` |
-| Windows exe / install dir / service | `rustdesk.exe`, `C:\Program Files\RustDesk`, `RustDesk` | `OpenDesk.exe`, `C:\Program Files\OpenDesk`, `OpenDesk` |
-| Settings, ID and password | `~/.config/rustdesk`, `%APPDATA%\RustDesk` | `~/.config/opendesk`, `%APPDATA%\OpenDesk` |
-| Logs | `~/.local/share/logs/RustDesk` | `~/.local/share/logs/OpenDesk` |
+| Linux package / command | `rustdesk` | `veildesk` / `veildesk` |
+| Linux install dir / service | `/usr/share/rustdesk`, `rustdesk.service` | `/usr/share/veildesk`, `veildesk.service` |
+| Windows exe / install dir / service | `rustdesk.exe`, `C:\Program Files\RustDesk`, `RustDesk` | `VeilDesk.exe`, `C:\Program Files\VeilDesk`, `VeilDesk` |
+| Settings, ID and password | `~/.config/rustdesk`, `%APPDATA%\RustDesk` | `~/.config/veildesk`, `%APPDATA%\VeilDesk` |
+| Logs | `~/.local/share/logs/RustDesk` | `~/.local/share/logs/VeilDesk` |
 
 Because its settings are separate, the fork gets **its own RustDesk ID and password**. Use the
 fork's ID (shown in its main window) when connecting to a machine for Blackout. The name is the
@@ -60,12 +60,12 @@ menu). It fills your whole screen with the remote desktop: your taskbar, the win
 session tabs are hidden. Click it again (now an exit-fullscreen icon) to go back to a normal
 window. It works on Windows and Ubuntu controllers and does not need anything on the remote side.
 
-## Upgrading from "RustDesk Blackout"
+## Upgrading from earlier test builds
 
-Earlier test builds were called *RustDesk Blackout*. OpenDesk is a separate install with its own
-settings, so it gets a **new ID and password**. Remove the old build first:
-`sudo apt remove rustdesk-blackout` on Ubuntu, and uninstall or delete `RustDeskBlackout` on
-Windows.
+Earlier test builds were called *RustDesk Blackout* and *OpenDesk*. VeilDesk is a separate install
+with its own settings, so it gets a **new ID and password**. Remove the old builds first:
+`sudo apt remove rustdesk-blackout opendesk` on Ubuntu, and uninstall or delete
+`RustDeskBlackout` / `OpenDesk` on Windows.
 
 ## Supported combinations
 
@@ -100,20 +100,20 @@ sha256sum -c SHA256SUMS.txt --ignore-missing
 ### Ubuntu
 
 ```bash
-sudo apt install ./opendesk-1.5.3-ubuntu-x86_64.deb
-opendesk          # or open "OpenDesk" from the app menu
+sudo apt install ./veildesk-1.5.3-ubuntu-x86_64.deb
+veildesk          # or open "VeilDesk" from the app menu
 ```
 
 It installs **beside** an official RustDesk and does not touch it. After installing, log out and
-back in (or reboot) once so its service (`opendesk.service`) starts in your Xorg session.
-Remove it with `sudo apt remove opendesk`.
+back in (or reboot) once so its service (`veildesk.service`) starts in your Xorg session.
+Remove it with `sudo apt remove veildesk`.
 
 ### Windows
 
-- `OpenDesk-1.5.3-windows-x86_64.exe`: run it. It works without installing (it unpacks
-  to its own `opendesk` folder), and the app offers *Install* from its main window, which
-  installs to `C:\Program Files\OpenDesk` beside an official RustDesk.
-- `OpenDesk-1.5.3-windows-x86_64.zip`: the same files as a plain folder.
+- `VeilDesk-1.5.3-windows-x86_64.exe`: run it. It works without installing (it unpacks
+  to its own `veildesk` folder), and the app offers *Install* from its main window, which
+  installs to `C:\Program Files\VeilDesk` beside an official RustDesk.
+- `VeilDesk-1.5.3-windows-x86_64.zip`: the same files as a plain folder.
 
 The Windows build is **not code-signed**, so Windows SmartScreen will warn. Click
 *More info → Run anyway*.
@@ -191,7 +191,7 @@ line.
 ### Recovery
 
 1. **Before** blanking, the original ramps are written to
-   `~/.config/opendesk/blackout_state.json` (mode 0600).
+   `~/.config/veildesk/blackout_state.json` (mode 0600).
 2. A small **guard** process (`rustdesk --blackout-guard`) waits on a pipe from the server. It
    is event-driven and does not poll. The pipe closes however the server ends, including a
    crash or `SIGKILL`, and the guard then restores the ramps. It ignores SIGTERM/SIGHUP, so a
@@ -232,7 +232,7 @@ ramp changed since, or reset by a reboot or X restart, is left alone.
 |---|---|
 | "does not support Blackout" | Both sides need this fork. On Ubuntu, log in with "Ubuntu on Xorg". |
 | "refused Blackout" | The host must allow keyboard/mouse control for your session. Turn view-only off. |
-| Monitor stays black after the session | Log out and back in, or run `xrandr --output <name> --brightness 1` in the session. Please report it, with `~/.local/share/logs/OpenDesk/server/*.log` (lines containing `blackout:`). |
+| Monitor stays black after the session | Log out and back in, or run `xrandr --output <name> --brightness 1` in the session. Please report it, with `~/.local/share/logs/VeilDesk/server/*.log` (lines containing `blackout:`). |
 | Pointer still visible | Hardware-cursor limitation of the driver (see above). |
 | Comes back after a while | Night Light or a colour daemon reset the gamma. Disable it. |
 

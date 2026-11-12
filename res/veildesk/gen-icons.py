@@ -1,5 +1,5 @@
-"""Renders the OpenDesk icon (same shapes as icon.svg) and writes every icon file the
-Windows and Linux builds embed. Run from the repo root: python3 res/opendesk/gen-icons.py"""
+"""Renders the VeilDesk icon (same shapes as icon.svg) and writes every icon file the
+Windows and Linux builds embed. Run from the repo root: python3 res/veildesk/gen-icons.py"""
 import shutil
 from PIL import Image, ImageDraw
 
@@ -55,5 +55,5 @@ ico = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
 size(256).save("res/icon.ico", sizes=ico)
 size(256).save("flutter/windows/runner/resources/app_icon.ico", sizes=ico)
 size(64).save("res/tray-icon.ico", sizes=[(16, 16), (24, 24), (32, 32), (48, 48)])
-shutil.copy("res/opendesk/icon.svg", "res/scalable.svg")
-shutil.copy("res/opendesk/icon.svg", "flutter/assets/icon.svg")
+shutil.copy("res/veildesk/icon.svg", "res/scalable.svg")
+shutil.copy("res/veildesk/icon.svg", "flutter/assets/icon.svg")

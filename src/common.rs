@@ -122,7 +122,7 @@ impl Drop for SimpleCallOnReturn {
 
 /// The Blackout fork installs beside official RustDesk: this name gives it its own config, ID,
 /// service, IPC paths and install directory.
-pub const FORK_APP_NAME: &str = "OpenDesk";
+pub const FORK_APP_NAME: &str = "VeilDesk";
 
 pub fn global_init() -> bool {
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
