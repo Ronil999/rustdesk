@@ -12,12 +12,15 @@ off, disconnecting, or the session ending for any reason (including a crash) res
 
 ### Downloads
 
-| File | For |
-|---|---|
-| `RustDeskBlackout-1.5.3-windows-x86_64.exe` | Windows 10/11 x64, run or install |
-| `RustDeskBlackout-1.5.3-windows-x86_64.zip` | Windows 10/11 x64, plain folder |
-| `rustdesk-blackout-1.5.3-ubuntu-x86_64.deb` | Ubuntu 18.04+ x64: `sudo apt install ./<file>`, then run `rustdeskblackout` |
-| `SHA256SUMS.txt` | `sha256sum -c SHA256SUMS.txt --ignore-missing` |
+| Architecture | Windows | Ubuntu | Checksums |
+|---|---|---|---|
+| x86-64 (64-bit) | [EXE](https://github.com/Ronil999/rustdesk/releases/download/{TAG}/RustDeskBlackout-1.5.3-windows-x86_64.exe) &nbsp; [ZIP](https://github.com/Ronil999/rustdesk/releases/download/{TAG}/RustDeskBlackout-1.5.3-windows-x86_64.zip) | [Download (.deb)](https://github.com/Ronil999/rustdesk/releases/download/{TAG}/rustdesk-blackout-1.5.3-ubuntu-x86_64.deb) | [SHA256SUMS](https://github.com/Ronil999/rustdesk/releases/download/{TAG}/SHA256SUMS.txt) |
+
+macOS, Android, iOS, Flatpak, Web, ARM and 32-bit builds are not available for this fork.
+
+- **Windows 10/11:** EXE runs or installs the app; ZIP is the same app as a plain folder.
+- **Ubuntu 18.04+:** `sudo apt install ./rustdesk-blackout-1.5.3-ubuntu-x86_64.deb`, then run `rustdeskblackout`.
+- **Verify:** `sha256sum -c SHA256SUMS.txt --ignore-missing`
 
 ### Installs beside official RustDesk
 

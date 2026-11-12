@@ -468,7 +468,7 @@ jobs:
           cat SHA256SUMS.txt
           cd ..
           {
-            cat docs/blackout/RELEASE_NOTES.md
+            sed "s/{TAG}/${GITHUB_REF_NAME}/g" docs/blackout/RELEASE_NOTES.md
             echo
             echo "Built from commit \`${GITHUB_SHA}\` (both platforms)."
             echo
