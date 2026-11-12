@@ -10,6 +10,7 @@ on:
       - feature/blackout-support
     tags:
       - "v*-blackout"
+      - "v*-opendesk"
 
 permissions:
   contents: read
@@ -261,7 +262,7 @@ jobs:
           if (-not (Test-Path ./rustdesk/rustdesk.exe)) { throw "rustdesk.exe was not produced" }
           # The exe carries the app name, so installs, services and the portable unpack
           # directory stay apart from official RustDesk.
-          mv ./rustdesk/rustdesk.exe ./rustdesk/RustDeskBlackout.exe
+          mv ./rustdesk/rustdesk.exe ./rustdesk/OpenDesk.exe
 
           # Virtual display driver, as in the official package.
           Invoke-WebRequest -Uri https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
@@ -290,16 +291,16 @@ jobs:
           sed -i '/dpiAware/d' res/manifest.xml
           pushd ./libs/portable
           pip3 install -r requirements.txt
-          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/RustDeskBlackout.exe
+          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/OpenDesk.exe
           popd
           mkdir -p ./dist
-          mv ./target/release/rustdesk-portable-packer.exe ./dist/RustDeskBlackout-${{ env.VERSION }}-windows-x86_64.exe
-          7z a ./dist/RustDeskBlackout-${{ env.VERSION }}-windows-x86_64.zip ./rustdesk/*
+          mv ./target/release/rustdesk-portable-packer.exe ./dist/OpenDesk-${{ env.VERSION }}-windows-x86_64.exe
+          7z a ./dist/OpenDesk-${{ env.VERSION }}-windows-x86_64.zip ./rustdesk/*
 
       - name: Upload Windows package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: rustdesk-blackout-windows-x86_64
+          name: opendesk-windows-x86_64
           path: ./dist/*
           if-no-files-found: error
 
@@ -423,17 +424,17 @@ jobs:
             export DEB_ARCH=amd64
             python3 ./build.py --flutter --skip-cargo 2>&1 | tee -a build-linux.log
 
-      - name: Rebrand deb to install beside official RustDesk
+      - name: Rebrand deb as OpenDesk (installs beside official RustDesk)
         run: |
           mkdir -p dist
-          bash res/blackout/rebrand-deb.sh rustdesk-${{ env.VERSION }}.deb dist/rustdesk-blackout-${{ env.VERSION }}-ubuntu-x86_64.deb
+          bash res/blackout/rebrand-deb.sh rustdesk-${{ env.VERSION }}.deb dist/opendesk-${{ env.VERSION }}-ubuntu-x86_64.deb
           dpkg-deb --info dist/*.deb
-          dpkg-deb --contents dist/*.deb | grep -E "usr/share/rustdeskblackout/(rustdeskblackout|lib/librustdesk.so)$"
+          dpkg-deb --contents dist/*.deb | grep -E "usr/share/opendesk/(opendesk|lib/librustdesk.so)$"
 
       - name: Upload Ubuntu package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: rustdesk-blackout-ubuntu-x86_64
+          name: opendesk-ubuntu-x86_64
           path: dist/*.deb
           if-no-files-found: error
 
@@ -457,7 +458,7 @@ jobs:
 
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          pattern: rustdesk-blackout-*
+          pattern: opendesk-*
           path: release
           merge-multiple: true
 
@@ -481,6 +482,6 @@ jobs:
         with:
           draft: false
           prerelease: true
-          name: RustDesk Blackout fork ${{ github.ref_name }}
+          name: OpenDesk ${{ github.ref_name }}
           body_path: release-notes.md
           files: release/*
