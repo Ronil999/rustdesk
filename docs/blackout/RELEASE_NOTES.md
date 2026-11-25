@@ -1,7 +1,7 @@
-## VeilDesk
+## RustDesk-2.0
 
-**Unofficial build.** This is an independently maintained fork of RustDesk 1.5.3 with its own
-name and icon, *Blackout*, and a toolbar *Fullscreen* button. It is not made or supported by the RustDesk team. Source code (AGPL-3.0):
+**Unofficial build.** This is an independently maintained fork of RustDesk 1.5.3 with *Blackout*, a
+toolbar *Fullscreen* button and *Wake-on-LAN* settings. It is not made, endorsed or supported by the RustDesk team; "RustDesk" and its logo are trademarks of their owners. Source code (AGPL-3.0):
 this repository, at the commit named below.
 
 ### New: Blackout
@@ -15,27 +15,35 @@ off, disconnecting, or the session ending for any reason (including a crash) res
 The remote toolbar has a **Fullscreen** button (four-corners icon). It shows only the remote
 screen: your taskbar, window frame and tabs are hidden. Click it again to exit.
 
+### New: Wake-on-LAN for every saved device
+
+Right-click a device in Recent, Favorites, Discovered, Address book or Group → **WOL** wakes it;
+**Wake-on-LAN settings** stores its MAC address and an optional extra address (subnet broadcast or a
+router forwarding UDP). If the MAC is not known yet, the app asks for it. The device needs
+Wake-on-LAN enabled in BIOS and on its network card; it works within a local network.
+
 ### Upgrading from earlier test builds
 
-VeilDesk replaces the earlier *RustDesk Blackout* and *OpenDesk* test builds and gets a **new ID
-and password**. Uninstall the old builds first (`sudo apt remove rustdesk-blackout opendesk` on
-Ubuntu; uninstall or delete `RustDeskBlackout` / `OpenDesk` on Windows).
+RustDesk-2.0 replaces the earlier *RustDesk Blackout*, *OpenDesk* and *VeilDesk* test builds and
+gets a **new ID and password**. Uninstall the old builds first
+(`sudo apt remove rustdesk-blackout opendesk veildesk` on Ubuntu; uninstall or delete
+`RustDeskBlackout` / `OpenDesk` / `VeilDesk` on Windows).
 
 ### Downloads
 
 | Architecture | Windows | Ubuntu | Checksums |
 |---|---|---|---|
-| x86-64 (64-bit) | [EXE](https://github.com/Ronil999/rustdesk/releases/download/{TAG}/VeilDesk-1.5.3-windows-x86_64.exe) &nbsp; [ZIP](https://github.com/Ronil999/rustdesk/releases/download/{TAG}/VeilDesk-1.5.3-windows-x86_64.zip) | [Download (.deb)](https://github.com/Ronil999/rustdesk/releases/download/{TAG}/veildesk-1.5.3-ubuntu-x86_64.deb) | [SHA256SUMS](https://github.com/Ronil999/rustdesk/releases/download/{TAG}/SHA256SUMS.txt) |
+| x86-64 (64-bit) | [EXE](https://github.com/Ronil999/rustdesk/releases/download/{TAG}/RustDesk2-1.5.3-windows-x86_64.exe) &nbsp; [ZIP](https://github.com/Ronil999/rustdesk/releases/download/{TAG}/RustDesk2-1.5.3-windows-x86_64.zip) | [Download (.deb)](https://github.com/Ronil999/rustdesk/releases/download/{TAG}/rustdesk2-1.5.3-ubuntu-x86_64.deb) | [SHA256SUMS](https://github.com/Ronil999/rustdesk/releases/download/{TAG}/SHA256SUMS.txt) |
 
 macOS, Android, iOS, Flatpak, Web, ARM and 32-bit builds are not available for this fork.
 
 - **Windows 10/11:** EXE runs or installs the app; ZIP is the same app as a plain folder.
-- **Ubuntu 18.04+:** `sudo apt install ./veildesk-1.5.3-ubuntu-x86_64.deb`, then run `veildesk`.
+- **Ubuntu 18.04+:** `sudo apt install ./rustdesk2-1.5.3-ubuntu-x86_64.deb`, then run `rustdesk2`.
 - **Verify:** `sha256sum -c SHA256SUMS.txt --ignore-missing`
 
 ### Installs beside official RustDesk
 
-The app is called **VeilDesk** and has its own install folder, service, settings, ID and
+The app is called **RustDesk-2.0** and has its own install folder, service, settings, ID and
 password, so an official RustDesk on the same computer keeps working untouched. Connect using the
 **fork's ID** (shown in its main window).
 

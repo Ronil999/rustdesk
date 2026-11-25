@@ -121,8 +121,12 @@ impl Drop for SimpleCallOnReturn {
 }
 
 /// The Blackout fork installs beside official RustDesk: this name gives it its own config, ID,
-/// service, IPC paths and install directory.
-pub const FORK_APP_NAME: &str = "VeilDesk";
+/// service, IPC paths and install directory. It stays free of dots and spaces because it ends up
+/// in file names, unit names and the URI scheme.
+pub const FORK_APP_NAME: &str = "RustDesk2";
+
+/// The name people see: window titles, tray, translated text, menu entries.
+pub const FORK_DISPLAY_NAME: &str = "RustDesk-2.0";
 
 pub fn global_init() -> bool {
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
@@ -1235,6 +1239,16 @@ pub async fn do_check_software_update() -> hbb_common::ResultType<()> {
 #[inline]
 pub fn get_app_name() -> String {
     hbb_common::config::APP_NAME.read().unwrap().clone()
+}
+
+/// The name shown to people. `get_app_name` stays the identifier behind paths and services.
+pub fn get_app_display_name() -> String {
+    let name = get_app_name();
+    if name == FORK_APP_NAME {
+        FORK_DISPLAY_NAME.to_owned()
+    } else {
+        name
+    }
 }
 
 #[inline]

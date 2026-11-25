@@ -822,7 +822,8 @@ fn core_main_invoke_new_connection(mut args: std::env::Args) -> Option<Vec<Strin
         use winapi::um::winuser::WM_USER;
         let res = crate::platform::send_message_to_hnwd(
             &crate::platform::FLUTTER_RUNNER_WIN32_WINDOW_CLASS,
-            &crate::get_app_name(),
+            // The main window's title is the display name (see getWindowName in Flutter).
+            &crate::get_app_display_name(),
             (WM_USER + 2) as _, // referred from unilinks desktop pub
             uni_links.as_str(),
             false,

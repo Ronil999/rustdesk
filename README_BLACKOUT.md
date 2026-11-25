@@ -1,11 +1,11 @@
-# VeilDesk
+# RustDesk-2.0
 
 > **This is an independently maintained fork of [RustDesk](https://github.com/rustdesk/rustdesk),
-> not an official RustDesk release.** It adds *Blackout* and a toolbar *Fullscreen* button, with
-> its own name and icon. RustDesk is licensed under
-> AGPL-3.0 (see [LICENCE](LICENCE)); the full source of every build of this fork is in this
-> repository. "RustDesk" and its logo are trademarks of their owners and are used here only to
-> name the upstream project.
+> not an official RustDesk release** and not made, endorsed or supported by the RustDesk team.
+> It adds *Blackout*, a toolbar *Fullscreen* button and per-device *Wake-on-LAN* settings.
+> RustDesk is licensed under AGPL-3.0 (see [LICENCE](LICENCE)); the full source of every build
+> of this fork is in this repository. "RustDesk" and the RustDesk logo, which this fork's name and
+> icon use, are trademarks of their owners.
 
 ## What Blackout does
 
@@ -20,16 +20,16 @@ machine's running applications are not affected.
 
 ### Runs beside official RustDesk
 
-The app is named **VeilDesk** (`VeilDesk`) and keeps everything separate from an
+The app is named **RustDesk-2.0** (internal name `RustDesk2`) and keeps everything separate from an
 official RustDesk on the same computer, so both can be installed and running at once:
 
 | | Official RustDesk | This fork |
 |---|---|---|
-| Linux package / command | `rustdesk` | `veildesk` / `veildesk` |
-| Linux install dir / service | `/usr/share/rustdesk`, `rustdesk.service` | `/usr/share/veildesk`, `veildesk.service` |
-| Windows exe / install dir / service | `rustdesk.exe`, `C:\Program Files\RustDesk`, `RustDesk` | `VeilDesk.exe`, `C:\Program Files\VeilDesk`, `VeilDesk` |
-| Settings, ID and password | `~/.config/rustdesk`, `%APPDATA%\RustDesk` | `~/.config/veildesk`, `%APPDATA%\VeilDesk` |
-| Logs | `~/.local/share/logs/RustDesk` | `~/.local/share/logs/VeilDesk` |
+| Linux package / command | `rustdesk` | `rustdesk2` / `rustdesk2` |
+| Linux install dir / service | `/usr/share/rustdesk`, `rustdesk.service` | `/usr/share/rustdesk2`, `rustdesk2.service` |
+| Windows exe / install dir / service | `rustdesk.exe`, `C:\Program Files\RustDesk`, `RustDesk` | `RustDesk2.exe`, `C:\Program Files\RustDesk2`, `RustDesk2` |
+| Settings, ID and password | `~/.config/rustdesk`, `%APPDATA%\RustDesk` | `~/.config/rustdesk2`, `%APPDATA%\RustDesk2` |
+| Logs | `~/.local/share/logs/RustDesk` | `~/.local/share/logs/RustDesk2` |
 
 Because its settings are separate, the fork gets **its own RustDesk ID and password**. Use the
 fork's ID (shown in its main window) when connecting to a machine for Blackout. The name is the
@@ -60,12 +60,46 @@ menu). It fills your whole screen with the remote desktop: your taskbar, the win
 session tabs are hidden. Click it again (now an exit-fullscreen icon) to go back to a normal
 window. It works on Windows and Ubuntu controllers and does not need anything on the remote side.
 
+## Wake-on-LAN
+
+Right-click a device (or open its **⋮** menu) in the Recent, Favorites, Discovered, Address book
+or Group tab:
+
+- **WOL** sends a Wake-on-LAN magic packet to wake that device.
+- **Wake-on-LAN settings** sets the device's **MAC address** and an optional **Extra address**.
+
+The MAC address is filled in automatically for devices found under *Discovered* (LAN discovery).
+For other devices, or when the app says the MAC address is not known, enter it once: on the
+device to wake, run `ip link` (Linux, the `link/ether` value of the wired card) or `getmac /v`
+(Windows). Several MACs can be given, separated by commas.
+
+Packets go out as broadcasts on every local network the controller is on (port 9). The
+**Extra address** is also sent to, for when the device is on another network:
+
+- a subnet broadcast address, e.g. `192.168.1.255`, if your router passes directed broadcasts;
+- `host:port` of a router on the internet that forwards that UDP port to the device's network
+  broadcast address.
+
+Wake-on-LAN is a local-network feature: from home it **cannot** reach a PC on a college or
+office network unless that network forwards the packet to it, which most do not.
+
+### Preparing the device to be woken
+
+1. Enable *Wake on LAN* / *Power on by PCI-E* in its BIOS/UEFI. It works from sleep and from
+   shutdown, normally only over a **wired** connection.
+2. **Ubuntu**: `sudo ethtool -s <iface> wol g` enables it for the network card (check with
+   `sudo ethtool <iface> | grep Wake-on`, which must show `g`). It resets on reboot unless made
+   permanent, e.g. `nmcli connection modify "<connection>" 802-3-ethernet.wake-on-lan magic`.
+3. **Windows**: Device Manager → network adapter → *Power Management* → allow it to wake the
+   computer, and *Advanced* → *Wake on Magic Packet* → Enabled. Turning off *Fast startup* helps
+   wake from shutdown.
+
 ## Upgrading from earlier test builds
 
-Earlier test builds were called *RustDesk Blackout* and *OpenDesk*. VeilDesk is a separate install
-with its own settings, so it gets a **new ID and password**. Remove the old builds first:
-`sudo apt remove rustdesk-blackout opendesk` on Ubuntu, and uninstall or delete
-`RustDeskBlackout` / `OpenDesk` on Windows.
+Earlier test builds were called *RustDesk Blackout*, *OpenDesk* and *VeilDesk*. RustDesk-2.0 is
+a separate install with its own settings, so it gets a **new ID and password**. Remove the old
+builds first: `sudo apt remove rustdesk-blackout opendesk veildesk` on Ubuntu, and uninstall or
+delete `RustDeskBlackout` / `OpenDesk` / `VeilDesk` on Windows.
 
 ## Supported combinations
 
@@ -100,20 +134,20 @@ sha256sum -c SHA256SUMS.txt --ignore-missing
 ### Ubuntu
 
 ```bash
-sudo apt install ./veildesk-1.5.3-ubuntu-x86_64.deb
-veildesk          # or open "VeilDesk" from the app menu
+sudo apt install ./rustdesk2-1.5.3-ubuntu-x86_64.deb
+rustdesk2          # or open "RustDesk-2.0" from the app menu
 ```
 
 It installs **beside** an official RustDesk and does not touch it. After installing, log out and
-back in (or reboot) once so its service (`veildesk.service`) starts in your Xorg session.
-Remove it with `sudo apt remove veildesk`.
+back in (or reboot) once so its service (`rustdesk2.service`) starts in your Xorg session.
+Remove it with `sudo apt remove rustdesk2`.
 
 ### Windows
 
-- `VeilDesk-1.5.3-windows-x86_64.exe`: run it. It works without installing (it unpacks
-  to its own `veildesk` folder), and the app offers *Install* from its main window, which
-  installs to `C:\Program Files\VeilDesk` beside an official RustDesk.
-- `VeilDesk-1.5.3-windows-x86_64.zip`: the same files as a plain folder.
+- `RustDesk2-1.5.3-windows-x86_64.exe`: run it. It works without installing (it unpacks
+  to its own `rustdesk2` folder), and the app offers *Install* from its main window, which
+  installs to `C:\Program Files\RustDesk2` beside an official RustDesk.
+- `RustDesk2-1.5.3-windows-x86_64.zip`: the same files as a plain folder.
 
 The Windows build is **not code-signed**, so Windows SmartScreen will warn. Click
 *More info → Run anyway*.
@@ -191,7 +225,7 @@ line.
 ### Recovery
 
 1. **Before** blanking, the original ramps are written to
-   `~/.config/veildesk/blackout_state.json` (mode 0600).
+   `~/.config/rustdesk2/blackout_state.json` (mode 0600).
 2. A small **guard** process (`rustdesk --blackout-guard`) waits on a pipe from the server. It
    is event-driven and does not poll. The pipe closes however the server ends, including a
    crash or `SIGKILL`, and the guard then restores the ramps. It ignores SIGTERM/SIGHUP, so a
@@ -232,7 +266,7 @@ ramp changed since, or reset by a reboot or X restart, is left alone.
 |---|---|
 | "does not support Blackout" | Both sides need this fork. On Ubuntu, log in with "Ubuntu on Xorg". |
 | "refused Blackout" | The host must allow keyboard/mouse control for your session. Turn view-only off. |
-| Monitor stays black after the session | Log out and back in, or run `xrandr --output <name> --brightness 1` in the session. Please report it, with `~/.local/share/logs/VeilDesk/server/*.log` (lines containing `blackout:`). |
+| Monitor stays black after the session | Log out and back in, or run `xrandr --output <name> --brightness 1` in the session. Please report it, with `~/.local/share/logs/RustDesk2/server/*.log` (lines containing `blackout:`). |
 | Pointer still visible | Hardware-cursor limitation of the driver (see above). |
 | Comes back after a while | Night Light or a colour daemon reset the gamma. Disable it. |
 
