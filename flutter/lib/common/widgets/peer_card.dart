@@ -774,6 +774,15 @@ abstract class BasePeerCard extends StatelessWidget {
     );
   }
 
+  /// Wake-on-LAN needs raw UDP broadcasts, which the web client and iOS cannot send.
+  bool get _wolSupported => !isWeb && !isIOS;
+
+  void _addWolActions(List<MenuEntryBase<String>> menuItems, String id) {
+    if (!_wolSupported) return;
+    menuItems.add(_wolAction(id));
+    menuItems.add(_wolSettingsAction(id));
+  }
+
   @protected
   MenuEntryBase<String> _wolAction(String id) {
     return MenuEntryButton<String>(
@@ -781,9 +790,20 @@ abstract class BasePeerCard extends StatelessWidget {
         translate('WOL'),
         style: style,
       ),
-      proc: () {
-        bind.mainWol(id: id);
-      },
+      proc: () => sendWol(id),
+      padding: menuPadding,
+      dismissOnClicked: true,
+    );
+  }
+
+  @protected
+  MenuEntryBase<String> _wolSettingsAction(String id) {
+    return MenuEntryButton<String>(
+      childBuilder: (TextStyle? style) => Text(
+        translate('Wake-on-LAN settings'),
+        style: style,
+      ),
+      proc: () => wolSettingsDialog(id),
       padding: menuPadding,
       dismissOnClicked: true,
     );
@@ -1078,6 +1098,7 @@ class RecentPeerCard extends BasePeerCard {
 
     final menuItems = await _buildConnectionMenuItems(context);
     menuItems.add(MenuEntryDivider());
+    _addWolActions(menuItems, peer.id);
     if (isWindows) {
       menuItems.add(_createShortCutAction(peer.id));
     }
@@ -1121,6 +1142,7 @@ class FavoritePeerCard extends BasePeerCard {
       BuildContext context) async {
     final menuItems = await _buildConnectionMenuItems(context);
     menuItems.add(MenuEntryDivider());
+    _addWolActions(menuItems, peer.id);
     if (isWindows) {
       menuItems.add(_createShortCutAction(peer.id));
     }
@@ -1163,7 +1185,7 @@ class DiscoveredPeerCard extends BasePeerCard {
 
     final menuItems = await _buildConnectionMenuItems(context);
     menuItems.add(MenuEntryDivider());
-    menuItems.add(_wolAction(peer.id));
+    _addWolActions(menuItems, peer.id);
     if (isWindows) {
       menuItems.add(_createShortCutAction(peer.id));
     }
@@ -1201,6 +1223,7 @@ class AddressBookPeerCard extends BasePeerCard {
       BuildContext context) async {
     final menuItems = await _buildConnectionMenuItems(context);
     menuItems.add(MenuEntryDivider());
+    _addWolActions(menuItems, peer.id);
     if (isWindows) {
       menuItems.add(_createShortCutAction(peer.id));
     }
@@ -1337,9 +1360,10 @@ class MyGroupPeerCard extends BasePeerCard {
   Future<List<MenuEntryBase<String>>> _buildMenuItems(
       BuildContext context) async {
     final menuItems = await _buildConnectionMenuItems(context);
-    if (isWindows || gFFI.userModel.userName.isNotEmpty) {
+    if (_wolSupported || isWindows || gFFI.userModel.userName.isNotEmpty) {
       menuItems.add(MenuEntryDivider());
     }
+    _addWolActions(menuItems, peer.id);
     if (isWindows) {
       menuItems.add(_createShortCutAction(peer.id));
     }
@@ -1357,6 +1381,122 @@ class MyGroupPeerCard extends BasePeerCard {
   @protected
   @override
   void _update() => gFFI.groupModel.pull();
+}
+
+/// Sends Wake-on-LAN packets to [id]. When no MAC address is known yet, opens the
+/// Wake-on-LAN settings so the user can enter one.
+Future<void> sendWol(String id) async {
+  final err = await bind.mainWol(id: id);
+  if (err.isEmpty) {
+    showToast(translate('Wake-on-LAN packet sent'));
+  } else if (err.startsWith('wol-no-mac')) {
+    wolSettingsDialog(id, sendOnSave: true);
+  } else {
+    showToast('${translate('Failed')}: $err');
+  }
+}
+
+final _macPattern = RegExp(
+    r'^([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}$|^[0-9a-fA-F]{4}\.[0-9a-fA-F]{4}\.[0-9a-fA-F]{4}$|^[0-9a-fA-F]{12}$');
+
+/// Per-peer Wake-on-LAN settings: the MAC address(es) and an optional extra address to send to.
+void wolSettingsDialog(String id, {bool sendOnSave = false}) async {
+  final macController = TextEditingController(
+      text: await bind.mainGetPeerOption(id: id, key: 'wol-mac'));
+  final targetController = TextEditingController(
+      text: await bind.mainGetPeerOption(id: id, key: 'wol-target'));
+  final discovered = bind.mainGetLanPeerMacs(id: id);
+  final RxString macError = ''.obs;
+
+  gFFI.dialogManager.show((setState, close, context) {
+    submit() async {
+      final parts = macController.text
+          .split(RegExp(r'[,;\s]+'))
+          .where((p) => p.isNotEmpty)
+          .toList();
+      final bad = parts.where((p) => !_macPattern.hasMatch(p)).toList();
+      if (bad.isNotEmpty) {
+        macError.value =
+            '${translate('Invalid MAC address')}: ${bad.join(', ')}';
+        return;
+      }
+      if (parts.isEmpty && discovered.isEmpty && sendOnSave) {
+        macError.value = translate('wol-mac-required-tip');
+        return;
+      }
+      await bind.mainSetPeerOption(
+          id: id, key: 'wol-mac', value: parts.join(', '));
+      await bind.mainSetPeerOption(
+          id: id, key: 'wol-target', value: targetController.text.trim());
+      close();
+      if (sendOnSave) {
+        await sendWol(id);
+      } else {
+        showToast(translate('Successful'));
+      }
+    }
+
+    Widget row(String label, Widget field) => Row(
+          children: [
+            if (isDesktop)
+              ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 140),
+                  child: Text(
+                    '${translate(label)}:',
+                    textAlign: TextAlign.right,
+                  ).marginOnly(right: 10)),
+            Expanded(child: field),
+          ],
+        ).marginOnly(bottom: 8);
+
+    return CustomAlertDialog(
+      title: Text(translate('Wake-on-LAN settings')),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 500),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (sendOnSave)
+              Text(translate('wol-no-mac-tip')).marginOnly(bottom: 12),
+            row(
+                'MAC address',
+                Obx(() => TextField(
+                      decoration: InputDecoration(
+                          labelText:
+                              isDesktop ? null : translate('MAC address'),
+                          hintText: 'aa:bb:cc:dd:ee:ff',
+                          errorText:
+                              macError.value.isEmpty ? null : macError.value),
+                      controller: macController,
+                      autofocus: true,
+                      onChanged: (_) => macError.value = '',
+                    ).workaroundFreezeLinuxMint())),
+            if (discovered.isNotEmpty)
+              Text('${translate('Found on LAN')}: $discovered',
+                      style: Theme.of(context).textTheme.bodySmall)
+                  .marginOnly(bottom: 8),
+            row(
+                'Extra address',
+                TextField(
+                  decoration: InputDecoration(
+                      labelText: isDesktop ? null : translate('Extra address'),
+                      hintText: '192.168.1.255  /  example.ddns.net:9'),
+                  controller: targetController,
+                ).workaroundFreezeLinuxMint()),
+            Text(translate('wol-settings-tip'),
+                style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ),
+      ),
+      actions: [
+        dialogButton("Cancel", onPressed: close, isOutline: true),
+        dialogButton(sendOnSave ? "Save and wake" : "OK", onPressed: submit),
+      ],
+      onSubmit: submit,
+      onCancel: close,
+    );
+  });
 }
 
 void _rdpDialog(String id) async {

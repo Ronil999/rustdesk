@@ -2252,10 +2252,24 @@ pub fn main_get_mouse_time() -> f64 {
     }
 }
 
-pub fn main_wol(id: String) {
-    // TODO: move send_wol outside.
+/// Returns "" on success, otherwise the error; one starting with `wol-no-mac` means no MAC is
+/// known for the peer.
+pub fn main_wol(id: String) -> String {
     #[cfg(not(any(target_os = "ios")))]
-    crate::lan::send_wol(id)
+    return match crate::lan::send_wol(id) {
+        Ok(_) => "".to_owned(),
+        Err(e) => e.to_string(),
+    };
+    #[cfg(target_os = "ios")]
+    return "Wake-on-LAN is not supported on iOS".to_owned();
+}
+
+/// MAC addresses LAN discovery found for the peer, comma separated.
+pub fn main_get_lan_peer_macs(id: String) -> SyncReturn<String> {
+    #[cfg(not(any(target_os = "ios")))]
+    return SyncReturn(crate::lan::lan_peer_macs(&id).join(", "));
+    #[cfg(target_os = "ios")]
+    return SyncReturn("".to_owned());
 }
 
 pub fn main_create_shortcut(_id: String) {

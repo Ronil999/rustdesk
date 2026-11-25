@@ -83,25 +83,111 @@ pub async fn discover() -> ResultType<()> {
     Ok(())
 }
 
-pub fn send_wol(id: String) {
-    let interfaces = default_net::get_interfaces();
-    for peer in &config::LanPeers::load().peers {
+/// MAC addresses LAN discovery has seen for this peer.
+pub fn lan_peer_macs(id: &str) -> Vec<String> {
+    let mut macs = Vec::new();
+    for peer in config::LanPeers::load().peers {
         if peer.id == id {
-            for (_, mac) in peer.ip_mac.iter() {
-                if let Ok(mac_addr) = mac.parse() {
-                    for interface in &interfaces {
-                        for ipv4 in &interface.ipv4 {
-                            // remove below mask check to avoid unexpected bug
-                            // if (u32::from(ipv4.addr) & u32::from(ipv4.netmask)) == (u32::from(peer_ip) & u32::from(ipv4.netmask))
-                            log::info!("Send wol to {mac_addr} of {}", ipv4.addr);
-                            allow_err!(wol::send_wol(mac_addr, None, Some(IpAddr::V4(ipv4.addr))));
-                        }
+            for (_, mac) in peer.ip_mac {
+                if let Some(mac) = base::wol::parse_mac(&mac) {
+                    let mac = base::wol::format_mac(&mac);
+                    if !macs.contains(&mac) {
+                        macs.push(mac);
                     }
                 }
             }
-            break;
         }
     }
+    macs
+}
+
+/// Sends Wake-on-LAN magic packets to the peer's MAC addresses: the ones set in its
+/// Wake-on-LAN settings plus the ones LAN discovery found. They go out as broadcasts on every
+/// local IPv4 network, and to the peer's optional extra target (a subnet broadcast address or a
+/// router forwarding UDP from the internet). Returns how many packets were sent.
+///
+/// Errors start with `wol-no-mac` when no MAC is known, so the UI can offer the settings.
+pub fn send_wol(id: String) -> ResultType<usize> {
+    use base::wol;
+
+    let options = config::PeerConfig::load(&id).options;
+    let manual = options.get(wol::MAC_OPTION).cloned().unwrap_or_default();
+    let (mut macs, invalid) = wol::parse_mac_list(&manual);
+    if !invalid.is_empty() {
+        log::warn!("wol: ignoring invalid MAC {invalid:?} for {id}");
+    }
+    for mac in lan_peer_macs(&id) {
+        if let Some(mac) = wol::parse_mac(&mac) {
+            wol::push_unique(&mut macs, mac);
+        }
+    }
+    if macs.is_empty() {
+        bail!("wol-no-mac: no MAC address known for {id}");
+    }
+    let packets: Vec<_> = macs.iter().map(wol::magic_packet).collect();
+
+    let mut sent = 0usize;
+    let mut last_err = String::new();
+    let send = |socket: &UdpSocket, dest: SocketAddr, sent: &mut usize, last_err: &mut String| {
+        for packet in &packets {
+            match socket.send_to(packet, dest) {
+                Ok(_) => *sent += 1,
+                Err(e) => *last_err = format!("{dest}: {e}"),
+            }
+        }
+    };
+
+    for interface in default_net::get_interfaces() {
+        for ipv4 in &interface.ipv4 {
+            if ipv4.addr.is_loopback() || ipv4.addr.is_unspecified() {
+                continue;
+            }
+            let socket = match wol::broadcast_socket(IpAddr::V4(ipv4.addr)) {
+                Ok(socket) => socket,
+                Err(e) => {
+                    last_err = format!("{}: {e}", ipv4.addr);
+                    continue;
+                }
+            };
+            let mut dests = vec![Ipv4Addr::BROADCAST];
+            if let Some(directed) = wol::directed_broadcast(ipv4.addr, ipv4.netmask) {
+                dests.push(directed);
+            }
+            for dest in dests {
+                send(
+                    &socket,
+                    SocketAddr::new(IpAddr::V4(dest), wol::DEFAULT_PORT),
+                    &mut sent,
+                    &mut last_err,
+                );
+            }
+        }
+    }
+
+    let target = options.get(wol::TARGET_OPTION).cloned().unwrap_or_default();
+    if !target.trim().is_empty() {
+        match wol::resolve_target(&target) {
+            Ok(dests) => {
+                for dest in dests {
+                    match wol::broadcast_socket(wol::unspecified_for(&dest)) {
+                        Ok(socket) => send(&socket, dest, &mut sent, &mut last_err),
+                        Err(e) => last_err = format!("{dest}: {e}"),
+                    }
+                }
+            }
+            Err(e) => last_err = format!("{}: {e}", target.trim()),
+        }
+    }
+
+    let macs: Vec<_> = macs.iter().map(wol::format_mac).collect();
+    if sent == 0 {
+        bail!("Failed to send Wake-on-LAN packet: {last_err}");
+    }
+    log::info!("wol: sent {sent} magic packets for {id} to {macs:?}");
+    if !last_err.is_empty() {
+        log::warn!("wol: some packets failed, last error {last_err}");
+    }
+    Ok(sent)
 }
 
 #[inline]

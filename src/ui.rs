@@ -487,7 +487,7 @@ impl UI {
     }
 
     fn send_wol(&mut self, id: String) {
-        crate::lan::send_wol(id)
+        allow_err!(crate::lan::send_wol(id));
     }
 
     fn new_remote(&mut self, id: String, remote_type: String, force_relay: bool) {

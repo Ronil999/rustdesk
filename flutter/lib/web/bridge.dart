@@ -1463,8 +1463,12 @@ class RustdeskImpl {
     throw UnimplementedError("mainGetMouseTime");
   }
 
-  Future<void> mainWol({required String id, dynamic hint}) {
+  Future<String> mainWol({required String id, dynamic hint}) {
     throw UnimplementedError("mainWol");
+  }
+
+  String mainGetLanPeerMacs({required String id, dynamic hint}) {
+    return '';
   }
 
   Future<void> mainCreateShortcut({required String id, dynamic hint}) {

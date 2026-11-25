@@ -295,5 +295,8 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("blackout_not_supported_tip", "The remote device does not support Blackout. It needs this RustDesk build and an Xorg (X11) session on Linux."),
         ("blackout_denied_tip", "The remote device refused Blackout. Remote control permission is required."),
         ("blackout_failed_tip", "Blackout could not change the remote monitors."),
+        ("wol-no-mac-tip", "The MAC address of this device is not known yet. Enter it to wake the device. On Linux run `ip link` on that device, on Windows run `getmac`."),
+        ("wol-mac-required-tip", "Enter at least one MAC address."),
+        ("wol-settings-tip", "Packets go to every local network. Extra address: a subnet broadcast address such as 192.168.1.255, or a public host:port whose router forwards UDP to that network. The device needs Wake-on-LAN enabled in BIOS and on its network card."),
     ].iter().cloned().collect();
 }
